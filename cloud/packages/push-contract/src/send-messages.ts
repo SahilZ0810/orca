@@ -59,14 +59,7 @@ export const PushSendResultSchema = z
   .object({ registrationId: OpaqueIdSchema, status: PushSendStatusSchema })
   .strict()
 
-export const PushSendResponseSchema = z
-  .object({
-    results: z.array(PushSendResultSchema).max(PUSH_LIMITS.maxRegistrationIdsPerSend)
-  })
-  .strict()
-
 export type PushNotification = z.infer<typeof PushNotificationSchema>
 export type PushSendRequest = z.infer<typeof PushSendRequestSchema>
 export type PushSendStatus = z.infer<typeof PushSendStatusSchema>
 export type PushSendResult = z.infer<typeof PushSendResultSchema>
-export type PushSendResponse = z.infer<typeof PushSendResponseSchema>

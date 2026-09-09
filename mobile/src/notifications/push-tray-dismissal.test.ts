@@ -29,11 +29,12 @@ describe('dismissPresentedPushNotification', () => {
       presented('tray-2', {
         orca: { hostFingerprint: 'fp0123456789abcd', notificationId: 'agent:two' }
       }),
+      presented('other-host', { hostFingerprint: 'another-host', notificationId: 'agent:one' }),
       // Flat FCM shape for the same notification, presented on Android.
       presented('tray-3', { hostFingerprint: 'fp0123456789abcd', notificationId: 'agent:one' })
     ] as never)
 
-    await dismissPresentedPushNotification('agent:one')
+    await dismissPresentedPushNotification('agent:one', 'fp0123456789abcd')
 
     expect(vi.mocked(Notifications.dismissNotificationAsync).mock.calls.map(([id]) => id)).toEqual([
       'tray-1',
@@ -41,12 +42,12 @@ describe('dismissPresentedPushNotification', () => {
     ])
   })
 
-  it('ignores locally scheduled notifications, which the local registry already owns', async () => {
+  it('ignores notifications without a gateway identity', async () => {
     vi.mocked(Notifications.getPresentedNotificationsAsync).mockResolvedValue([
       presented('tray-1', { hostId: 'host-1', notificationId: 'agent:one' })
     ] as never)
 
-    await dismissPresentedPushNotification('agent:one')
+    await dismissPresentedPushNotification('agent:one', 'fp0123456789abcd')
 
     expect(Notifications.dismissNotificationAsync).not.toHaveBeenCalled()
   })
@@ -56,7 +57,9 @@ describe('dismissPresentedPushNotification', () => {
       new Error('unavailable')
     )
 
-    await expect(dismissPresentedPushNotification('agent:one')).rejects.toThrow('unavailable')
+    await expect(dismissPresentedPushNotification('agent:one', 'fp0123456789abcd')).rejects.toThrow(
+      'unavailable'
+    )
   })
 })
 

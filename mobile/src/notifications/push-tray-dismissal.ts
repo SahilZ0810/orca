@@ -41,14 +41,14 @@ export function dismissRememberedPushNotifications(
 // Pushes shown while Orca was closed are absent from the local scheduling registry.
 export async function dismissPresentedPushNotification(
   notificationId: string,
-  hostFingerprint?: string,
+  hostFingerprint: string,
   fence?: { notificationEpoch?: string; notificationSeq?: number }
 ): Promise<void> {
-  if (hostFingerprint && fence) {
+  if (fence) {
     await rememberPushDismissal({ hostFingerprint, notificationId, ...fence })
   }
   await dismissMatchingPresentedPushes((payload) => {
-    if (hostFingerprint && payload.hostFingerprint !== hostFingerprint) {
+    if (payload.hostFingerprint !== hostFingerprint) {
       return false
     }
     return (

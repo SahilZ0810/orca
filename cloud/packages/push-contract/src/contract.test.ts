@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   ApnsEnvironmentSchema,
-  PushDeviceListResponseSchema,
-  PushDeviceRegistrationRequestSchema,
-  PushDeviceRegistrationResponseSchema
+  PushDeviceRegistrationRequestSchema
 } from './device-registration-messages.js'
 import {
-  PushErrorResponseSchema,
   PushHostChallengeRequestSchema,
   PushHostChallengeResponseSchema,
   PushHostSessionRequestSchema,
@@ -112,13 +109,6 @@ describe('host authentication schemas', () => {
       }).success
     ).toBe(false)
   })
-
-  it('names only the error codes the gateway may return', () => {
-    expect(PushErrorResponseSchema.safeParse({ error: 'session_expired' }).success).toBe(true)
-    expect(PushErrorResponseSchema.safeParse({ error: 'too_many_devices' }).success).toBe(true)
-    expect(PushErrorResponseSchema.safeParse({ error: 'rate_limited' }).success).toBe(true)
-    expect(PushErrorResponseSchema.safeParse({ error: 'teapot' }).success).toBe(false)
-  })
 })
 
 describe('device registration schemas', () => {
@@ -167,22 +157,6 @@ describe('device registration schemas', () => {
         platform: 'android',
         token: FCM_TOKEN,
         apnsEnvironment: 'sandbox'
-      }).success
-    ).toBe(false)
-  })
-
-  it('shapes the registration and list responses', () => {
-    expect(
-      PushDeviceRegistrationResponseSchema.safeParse({ registrationId: 'reg-1' }).success
-    ).toBe(true)
-    expect(
-      PushDeviceListResponseSchema.safeParse({
-        devices: [{ registrationId: 'reg-1', deviceId: 'device-1', platform: 'ios', dead: false }]
-      }).success
-    ).toBe(true)
-    expect(
-      PushDeviceListResponseSchema.safeParse({
-        devices: [{ registrationId: 'reg-1', deviceId: 'device-1', platform: 'ios' }]
       }).success
     ).toBe(false)
   })

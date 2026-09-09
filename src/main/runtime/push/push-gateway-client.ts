@@ -63,7 +63,6 @@ export class PushGatewayClient {
   private readonly origin: string
   private readonly fetchImpl: typeof globalThis.fetch
   private readonly session: PushGatewaySession
-  readonly hostFingerprint: string
 
   constructor(options: PushGatewayClientOptions) {
     this.origin = new URL(options.gatewayUrl).origin
@@ -74,7 +73,6 @@ export class PushGatewayClient {
       fetchImpl: this.fetchImpl,
       now: options.now ?? Date.now
     })
-    this.hostFingerprint = this.session.hostFingerprint
   }
 
   async registerDevice(input: {

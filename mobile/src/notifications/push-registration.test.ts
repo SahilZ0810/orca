@@ -136,13 +136,13 @@ describe('push registration capability gating', () => {
     expect(stored.registeredHostIds).toEqual([])
   })
 
-  it('leaves a capable host alone while the switch is off', async () => {
+  it('reconciles disabled consent even without registration records', async () => {
     const { client, sent } = makeClient([NOTIFICATIONS_REMOTE_PUSH_CAPABILITY])
 
     attachPushRegistration('host-1', client)
     await flush()
 
-    expect(methodsIn(sent)).toEqual(['status.get'])
+    expect(methodsIn(sent)).toEqual(['status.get', 'notifications.unregisterPush'])
   })
 
   it('omits apnsEnvironment for an Android token', async () => {
@@ -289,6 +289,27 @@ describe('push unregistration', () => {
     // it must not wait on a status.get that may never answer.
     expect(methodsIn(reconnected.sent)).toEqual(['notifications.unregisterPush'])
     expect(stored.pendingUnregisterHostIds).toEqual([])
+  })
+
+  it('recovers an offline disable after its cleanup write fails and mobile restarts', async () => {
+    const first = makeClient([NOTIFICATIONS_REMOTE_PUSH_CAPABILITY])
+    await setRemotePushEnabled(true)
+    const detach = attachPushRegistration('host-1', first.client)
+    await flush()
+    detach()
+    vi.mocked(saveRemotePushHostRegistrations).mockRejectedValueOnce(new Error('disk full'))
+
+    await expect(setRemotePushEnabled(false)).rejects.toThrow('disk full')
+    expect(enabled).toBe(false)
+    expect(stored.pendingUnregisterHostIds).toEqual([])
+
+    resetPushRegistrationForTests()
+    const reconnected = makeClient([NOTIFICATIONS_REMOTE_PUSH_CAPABILITY])
+    attachPushRegistration('host-1', reconnected.client)
+    await flush()
+
+    expect(methodsIn(reconnected.sent)).toEqual(['status.get', 'notifications.unregisterPush'])
+    expect(stored).toEqual({ registeredHostIds: [], pendingUnregisterHostIds: [] })
   })
 
   it('keeps the pending intent when the retry itself fails', async () => {

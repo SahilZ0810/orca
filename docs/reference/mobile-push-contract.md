@@ -414,8 +414,8 @@ alert. Hosts without push registration therefore have no mobile OS-banner fallba
 
 Native notification readers accept Expo's iOS `request.trigger.payload` as well as
 `request.content.data`. APNs custom fields can exist only in the former; foreground identity claims,
-dismissal, reconciliation, and tap routing all use the same reader. Legacy summary members remain
-readable only for notifications already delivered during a mixed-version transition.
+dismissal, reconciliation, and tap routing all use the same reader. Only individual notification
+payloads are supported; grouping is handled by the OS.
 
 ### Dismissal recovery and desktop presence
 
@@ -429,14 +429,17 @@ directory before fanout. History is bounded to 4,096 records retained for seven 
 notification text or push tokens. On reconnect, mobile sends up to 256 `deliveredPushes` identities
 from the current native tray in each `notifications.getMissedSince` request; updated hosts return
 optional `dismissedPushes` for confirmed handled identities. Mobile processes only those dismissal
-decisions. Unknown IDs, newer sequences, and different epochs are preserved. Older hosts ignore the
+decisions. Unknown IDs, unknown epochs, and newer sequences are preserved. Dismissing a stable
+notification ID also clears its recorded pre-restart identities, each through its own last recorded
+sequence; sequence counters from different epochs are never compared. Older hosts ignore the
 optional request field, and older clients ignore the additional response fields. Legacy replayed
 `notifications` and epoch fields remain wire-compatible but do not drive current mobile banners.
 
 On iOS, a local Expo module handles silent dismissals directly through the native notification
 center, independent of JavaScript initialization. Native and JavaScript dismissal paths use the
-same host/epoch/sequence fences; native dismissal fences retain up to 512 entries for 24 hours. Older
-native shells and Android retain the JavaScript implementation. A native callback test proves
+same host/epoch/sequence fences; native dismissal fences retain up to 512 entries for 24 hours.
+Android uses the JavaScript implementation. iOS requires the native module; its JavaScript background
+task also suppresses late alerts using the dismissal ledger. A native callback test proves
 processing only when invoked: iOS background push delivery remains best effort, including while
 suspended or force-quit. Every delivered push represents one notification. Reconciliation inspects
 up to 2,048 individual identities in pages of 256. It has no stored replay watermark: every connection

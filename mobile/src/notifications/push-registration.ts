@@ -70,7 +70,7 @@ async function mutateRecords(mutate: (value: RegistrationRecords) => void): Prom
   await saveRemotePushHostRegistrations({
     registeredHostIds: [...value.registered],
     pendingUnregisterHostIds: [...value.pending]
-  }).catch(() => {})
+  })
 }
 
 // A missing token is retried: APNs registration may still be in flight.
@@ -179,7 +179,17 @@ async function reconcileHost(hostId: string): Promise<void> {
   if (!state.supported || !isCurrent()) {
     return
   }
-  if (!(await loadPushNotificationsEnabled()) || AppState.currentState !== 'active') {
+  if (!(await loadPushNotificationsEnabled())) {
+    // Saved consent recovers a disable even if its pending-record write failed.
+    if (await sendUnregister(client, REQUEST_TIMEOUT_MS)) {
+      await mutateRecords((current) => {
+        current.pending.delete(hostId)
+        current.registered.delete(hostId)
+      })
+    }
+    return
+  }
+  if (AppState.currentState !== 'active') {
     return
   }
   const token = await currentToken()
@@ -205,7 +215,11 @@ async function reconcileHost(hostId: string): Promise<void> {
 
 function enqueueReconcile(hostId: string): Promise<void> {
   const state = hostState(hostId)
-  const run = state.chain.then(() => reconcileHost(hostId)).catch(() => {})
+  const run = state.chain
+    .then(() => reconcileHost(hostId))
+    .catch(() => {
+      console.warn('[push] Failed to reconcile notification registration')
+    })
   state.chain = run
   return run
 }
@@ -236,16 +250,19 @@ export function attachPushRegistration(hostId: string, client: PushClient): () =
 export async function setRemotePushEnabled(enabled: boolean): Promise<void> {
   consentGeneration++
   await savePushNotificationsEnabled(enabled)
-  await mutateRecords((current) => {
-    if (!enabled) {
-      for (const hostId of current.registered) {
-        current.pending.add(hostId)
+  try {
+    await mutateRecords((current) => {
+      if (!enabled) {
+        for (const hostId of current.registered) {
+          current.pending.add(hostId)
+        }
+        return
       }
-      return
-    }
-    current.pending.clear()
-  })
-  await reconcileAllHosts()
+      current.pending.clear()
+    })
+  } finally {
+    await reconcileAllHosts()
+  }
 }
 
 export async function setNotificationDeliveryPreferences(

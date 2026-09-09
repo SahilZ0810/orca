@@ -122,7 +122,7 @@ export class PushDeviceRegistryStore {
 
   async list(hostFingerprint: string): Promise<PushDeviceSummary[]> {
     const rows = await this.database.query(
-      // Bounded to what PushDeviceListResponseSchema will accept, so an
+      // Bounded by the device-list response limit, so an
       // oversized table degrades to a truncated list instead of a 500.
       `SELECT registration_id, device_id, platform, dead_at
        FROM push_devices WHERE host_fingerprint = ? ORDER BY created_at ASC LIMIT ?`,
